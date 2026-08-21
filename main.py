@@ -9,6 +9,11 @@ class TaskCreate(BaseModel):
     title: str
 
 
+class TaskUpdate(BaseModel):
+    title: str = None
+    done: bool = None
+
+
 tasks = [
     {"id": 1, "title": "sweeping", "done": True},
     {"id": 2, "title": "washing", "done": False},
@@ -48,3 +53,24 @@ def create_task(new_task: TaskCreate):
     task = {"id": next_id, "title": new_task.title, "done": False}
     tasks.append(task)
     return task
+
+
+@app.put("/tasks/{id}")
+def update_task(id: int, update: TaskUpdate):
+    for task in tasks:
+        if task["id"] == id:
+            if update.title is not None:
+                task["title"] = update.title
+            if update.done is not None:
+                task["done"] = update.done
+            return task
+    raise HTTPException(status_code=404, detail=f"Task {id} not found")
+
+
+@app.delete("/tasks/{id}", status_code=204)
+def delete_task(id: int):
+    for task in tasks:
+        if task["id"] == id:
+            tasks.remove(task)
+            return None
+    raise HTTPException(status_code=404, detail="no match found")
