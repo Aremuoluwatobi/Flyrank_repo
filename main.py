@@ -31,12 +31,12 @@ def check_health():
     return {"status": "ok"}
 
 
-@app.get("/tasks")
+@app.get("/tasks", description="Get a list of tasks")
 def get_tasks():
     return tasks
 
 
-@app.get("/tasks/{id}")
+@app.get("/tasks/{id}", description="fetch a single task by its ID.")
 def get_id_tasks(id: int):
     for task in tasks:
         if task["id"] == id:
@@ -44,7 +44,7 @@ def get_id_tasks(id: int):
     raise HTTPException(status_code=404, detail=f"Task {id} not found")
 
 
-@app.post("/tasks", status_code=201)
+@app.post("/tasks", status_code=201, description="create a new task and add it to the existing list of tasks and return the task")
 def create_task(new_task: TaskCreate):
     if new_task.title == "":
         raise HTTPException(status_code=400, detail="title is empty")
@@ -55,7 +55,7 @@ def create_task(new_task: TaskCreate):
     return task
 
 
-@app.put("/tasks/{id}")
+@app.put("/tasks/{id}", description="update a single task by its ID.")
 def update_task(id: int, update: TaskUpdate):
     for task in tasks:
         if task["id"] == id:
@@ -67,7 +67,7 @@ def update_task(id: int, update: TaskUpdate):
     raise HTTPException(status_code=404, detail=f"Task {id} not found")
 
 
-@app.delete("/tasks/{id}", status_code=204)
+@app.delete("/tasks/{id}", status_code=204, description="delete a single task by its ID and this action is irreversible.")
 def delete_task(id: int):
     for task in tasks:
         if task["id"] == id:
