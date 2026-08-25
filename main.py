@@ -1,8 +1,19 @@
 from fastapi import FastAPI
 from fastapi import HTTPException
 from pydantic import BaseModel
+from connected import conn
 
+from crud import (
+    create_table,
+    create_task,
+    get_all_tasks,
+    get_task_by_id,
+    update_task,
+    delete_tasks
+)
 app = FastAPI()
+
+create_table()
 
 
 class TaskCreate(BaseModel):
@@ -21,6 +32,10 @@ tasks = [
 ]
 
 
+def row_to_dict(row):
+    return dict(row)
+
+
 @app.get("/")
 def get_root():
     return {"name": "Task API", "version": "1.0", "endpoints": ["/tasks"]}
@@ -33,44 +48,41 @@ def check_health():
 
 @app.get("/tasks", description="Get a list of tasks")
 def get_tasks():
-    return tasks
+    rows = get_all_tasks()
+    return [row_to_dict(row) for row in rows]
 
 
 @app.get("/tasks/{id}", description="fetch a single task by its ID.")
 def get_id_tasks(id: int):
-    for task in tasks:
-        if task["id"] == id:
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {id} not found")
+    row = get_task_by_id(id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {id} not found")
+    return row_to_dict(row)
 
 
-@app.post("/tasks", status_code=201, description="create a new task and add it to the existing list of tasks and return the task")
-def create_task(new_task: TaskCreate):
+@app.post("/tasks", status_code=201, description="Create a new task and return it.")
+def create_task_route(new_task: TaskCreate):
     if new_task.title == "":
         raise HTTPException(status_code=400, detail="title is empty")
 
-    next_id = tasks[-1]["id"] + 1 if tasks else 1
-    task = {"id": next_id, "title": new_task.title, "done": False}
-    tasks.append(task)
-    return task
+    new_id = create_task(new_task.title, False)
+    row = get_task_by_id(new_id)
+    return row_to_dict(row)
 
 
 @app.put("/tasks/{id}", description="update a single task by its ID.")
 def update_task(id: int, update: TaskUpdate):
-    for task in tasks:
-        if task["id"] == id:
-            if update.title is not None:
-                task["title"] = update.title
-            if update.done is not None:
-                task["done"] = update.done
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {id} not found")
+    row = get_task_by_id(id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {id} not found")
+    update_task(id, update.title, update.done)
+    updated_row = get_task_by_id(id)
+    return row_to_dict(updated_row)
 
 
 @app.delete("/tasks/{id}", status_code=204, description="delete a single task by its ID and this action is irreversible.")
 def delete_task(id: int):
-    for task in tasks:
-        if task["id"] == id:
-            tasks.remove(task)
-            return None
-    raise HTTPException(status_code=404, detail="no match found")
+    row = get_task_by_id(id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="no match found")
+    delete_tasks(id)
